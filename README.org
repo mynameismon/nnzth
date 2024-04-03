@@ -3,5 +3,5 @@
 * About 
 Attempting to learn how NNs work, all thanks to Andrej Karapathy's excellent tutorials: [[https://karpathy.ai/zero-to-hero.html][Neural Networks: Zero to Hero]]. Each individual unit will be a in a separate Org file (of course!). Let's see how far do I get :)
 
-* Table of Contents:
+* Table of Contents
 1. [[file:micrograd.org][Micrograd]]
