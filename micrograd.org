@@ -1,3 +1,37 @@
 #+TITLE: Micrograd [[[https://www.youtube.com/watch?v=VMj-3S1tku0][YT Video]]]
 #+DESCRIPTION:  The spelled-out intro to neural networks and backpropagation: building micrograd
 
+* Environment setup
+
+#+begin_src shell :results verbatim
+poetry add matplotlib
+poetry add numpy
+#+end_src
+
+#+RESULTS:
+#+begin_example
+The following packages are already present in the pyproject.toml and will be skipped:
+
+  • matplotlib
+
+If you want to update it to the latest compatible version, you can use `poetry update package`.
+If you prefer to upgrade it to the latest available version, you can use `poetry add package@latest`.
+
+Nothing to add.
+The following packages are already present in the pyproject.toml and will be skipped:
+
+  • numpy
+
+If you want to update it to the latest compatible version, you can use `poetry update package`.
+If you prefer to upgrade it to the latest available version, you can use `poetry add package@latest`.
+
+Nothing to add.
+#+end_example
+
+* Required Imports
+#+begin_src jupyter :session micrograd :kernel python3
+print("Hello world")
+#+end_src
+
+#+RESULTS:
+: Hello world

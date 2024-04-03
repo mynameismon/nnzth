@@ -7,12 +7,26 @@ Attempting to learn how NNs work, all thanks to Andrej Karapathy's excellent tut
 1. [[file:micrograd.org][Micrograd]]
 
 * Environment setup
-#+begin_src shell
+#+begin_src shell :results verbatim
 poetry install --no-root
 
 poetry add jupyter
+poetry add ipython_launcher
 #+end_src
 
 #+RESULTS:
+#+begin_example
+Installing dependencies from lock file
+
+No dependencies to install or update
+The following packages are already present in the pyproject.toml and will be skipped:
+
+  • jupyter
+
+If you want to update it to the latest compatible version, you can use `poetry update package`.
+If you prefer to upgrade it to the latest available version, you can use `poetry add package@latest`.
+
+Nothing to add.
+#+end_example
 
 Other packages will be installed as an when required in the relevant Org mode files.

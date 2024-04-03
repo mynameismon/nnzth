@@ -1,15 +1,21 @@
 [tool.poetry]
-name = "]"
+name = "nnzth"
 version = "0.1.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["mynameismon"]
 license = "MIT"
-readme = "README.md"
+readme = "README.org"
 
 [tool.poetry.dependencies]
 python = "^3.10"
 jupyter = "^1.0.0"
 
+# Just to make emacs-jupyter working again. Absolute torture
+# Refer: https://github.com/emacs-jupyter/jupyter/issues/500
+jupyter_server = "=1.23.4"
+
+matplotlib = "^3.8.3"
+numpy = "^1.26.4"
 
 [build-system]
 requires = ["poetry-core"]
