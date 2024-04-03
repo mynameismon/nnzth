@@ -74,3 +74,83 @@ a
 
 #+RESULTS:
 | Value | a | data | = | 1.0 |
+
+* Visualising a function
+We use graphviz to visualise a function. We first install graphviz:
+
+** GraphViz Installation
+#+begin_src shell :results verbatim
+poetry add graphviz 
+#+end_src
+
+#+RESULTS:
+: The following packages are already present in the pyproject.toml and will be skipped:
+: 
+:   â¢ graphviz
+: 
+: If you want to update it to the latest compatible version, you can use `poetry update package`.
+: If you prefer to upgrade it to the latest available version, you can use `poetry add package@latest`.
+: 
+: Nothing to add.
+#+begin_src jupyter-python
+from graphviz import Digraph
+#+end_src
+
+#+RESULTS:
+
+** Tracing a Value across children
+To visualise the computation, we first require building the entire graph so that we can traverse and build it. This can be done using a simple depth first search that visits every node, includes the node if it hasn't already found it and continues along its merry way.
+#+begin_src jupyter-python
+def trace (root: Value):
+    nodes = set()
+    edges = set()
+
+    def build (v: Value):
+        if v not in nodes:
+            nodes.add(v)
+            for child in v._prev:
+                edges.add((child, v))
+                build(child)
+
+    build(root)
+    
+    return nodes, edges
+#+end_src
+
+#+RESULTS:
+** Actually building the graph
+#+begin_src jupyter-python
+def draw (root: Value):
+    dot = Digraph(format = 'svg', graph_attr = {'rankdir': 'LR'})
+
+    nodes, edges = trace(root)
+
+    for n in nodes:
+        uid = str(id(n))
+
+        # Creates a rectangular node
+        dot.node(name = uid, label = f"{n.label} | data {n.data}", shape = 'record')
+
+        # If the value is a result of some operation,
+        # it creates a new node with that operation and connects
+        # the element to that operation
+        if n._op:
+            dot.node(name = uid + n._op, label = n._op)
+            dot.edge(uid + n._op, uid)
+
+    # Connects all edges (computations) together
+    for u, v in edges:
+        dot.edge(str(id(u)), str(id(v)) + v._op)
+
+    return dot
+#+end_src
+
+#+RESULTS:
+
+** Testing
+#+begin_src jupyter-python
+draw(a + b * c)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/84ee14ddad8c5ee3ba78cab4fe4d27cdfe6177cb.svg]]
