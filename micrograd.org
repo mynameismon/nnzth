@@ -1,5 +1,6 @@
 #+TITLE: Micrograd [[[https://www.youtube.com/watch?v=VMj-3S1tku0][YT Video]]]
 #+DESCRIPTION:  The spelled-out intro to neural networks and backpropagation: building micrograd
+#+PROPERTY: header-args:jupyter-python :session micrograd :kernel python3 :async yes
 
 * Environment setup
 
@@ -29,9 +30,47 @@ Nothing to add.
 #+end_example
 
 * Required Imports
-#+begin_src jupyter :session micrograd :kernel python3
-print("Hello world")
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+
+%matplotlib inline
 #+end_src
 
 #+RESULTS:
-: Hello world
+
+* Value Object
+This will store each value of a neural network.
+#+begin_src jupyter-python
+class Value:
+    def __init__ (self, data: float, label = '', _children = (), _op = ''):
+        self.data = data
+        self.label = label
+        self._prev = set(_children)
+        self._op = _op
+
+    def __repr__ (self):
+        return f"(Value {self.label} data = {self.data})"
+
+    def __add__ (self, other):
+        out = Value(self.data + other.data, _children = (self, other), _op = '+')
+        return out
+
+    def __mul__ (self, other):
+        out = Value(self.data * other.data, _children = (self, other), _op = '*')
+        return out
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src jupyter-python
+a = Value(1.0, label = 'a')
+b = Value(2.0, label = 'b')
+c = Value(3.0, label = 'c')
+
+a
+#+end_src
+
+#+RESULTS:
+| Value | a | data | = | 1.0 |
