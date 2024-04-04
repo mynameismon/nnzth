@@ -91,6 +91,23 @@ class Value:
 
         out._backward = _backward
         return out
+
+    def backward (self):
+        topo = []
+        visited = set()
+
+        def build_topo (v):
+            if v not in visited:
+                visited.add(v)
+                for child in v._prev:
+                    build_topo(child)
+                topo.append(v)
+
+        build_topo(self)
+
+        self.grad = 1.0
+        for node in reversed(topo):
+            node._backward()
 #+end_src
 
 #+RESULTS:
@@ -101,7 +118,7 @@ a = Value(0.1, label = 'a')
 b = Value(2, label = 'b')
 c = Value(0.3, label = 'c')
 d = (a * b + c).tanh()
-d._backward()
+d.backward()
 draw(d)
 #+end_src
 
@@ -195,7 +212,7 @@ def draw (root: Value):
         uid = str(id(n))
 
         # Creates a rectangular node
-        dot.node(name = uid, label = f"{n.label} | data {n.data}", shape = 'record')
+        dot.node(name = uid, label = f"{n.label} | data {n.data} | grad {n.grad}", shape = 'record')
 
         # If the value is a result of some operation,
         # it creates a new node with that operation and connects
