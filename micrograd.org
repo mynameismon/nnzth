@@ -75,6 +75,40 @@ a
 #+RESULTS:
 | Value | a | data | = | 1.0 |
 
+
+** Gradient Descent
+Let us assume $L = a + b \cdot c$. Let us assume that $a$, $b$ and $c$ are independent values that can be computed.
+
+What happens to $L$ if we perturb $a$? This would be equivalent to finding the partial derivative of $L$ with respect to $a$, since we want to oberserve the change occuring with respect to the change in $a$. We can compute it in a straightforward manner:
+$$
+\frac{\partial L}{\partial a} = 1
+$$
+
+Again, what happens if we perturb $b$? Again, this would be the same as the partial derivative of $L$ with respect to $b$.
+$$
+\frac{\partial L}{\partial b} = c,
+$$
+and similarly for $c$.
+
+Now, what if $b$ itself was not an independent value? Let us say that $b = e \cdot f$, where $e$ and $f$ are independent variables. Now, computing
+$$
+\frac{\partial L}{\partial e}
+$$
+
+is slightly challenging, but we can simplify our work greatly using the chain rule. We know
+$$
+\frac{\partial L}{\partial b}
+$$
+from our earlier calculations, and we also know
+$$
+\frac{\partial b}{\partial e} = f
+$$
+
+From the chain rule, we can calculate
+$$
+\frac{\partial L}{\partial e} = \frac{\partial L}{\partial b} \cdot \frac{\partial b}{\partial e} = c \cdot f,
+$$
+which allows us to decompose the calculation of the derivative easily.
 * Visualising a function
 We use graphviz to visualise a function. We first install graphviz:
 
