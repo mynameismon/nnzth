@@ -63,14 +63,23 @@ class Value:
                     _children = (self, other), _op = '+')
 
         def _backward():
-            self.grad = out.grad
-            other.grad = out.grad
+            self.grad += out.grad
+            other.grad += out.grad
 
         out._backward = _backward
         return out
 
+    def __neg__ (self, other):
+        return self * -1
+
+    def __sub__ (self, other):
+        return self + (- other)
+
     def __radd__ (self, other):
         return self + other
+
+    def __rsub__ (self, other):
+        return other + (- self)
     
     def __mul__ (self, other):
         other = other if isinstance(other, Value) else Value(other, label = str(other))
@@ -79,8 +88,8 @@ class Value:
                     _children = (self, other), _op = '*')
 
         def _backward():
-            self.grad = other.data * out.grad
-            other.grad = self.data * out.grad
+            self.grad += other.data * out.grad
+            other.grad += self.data * out.grad
 
         out._backward = _backward
 
@@ -103,17 +112,20 @@ class Value:
     def __pow__ (self, other):
         assert isinstance(other, (int, float))
 
-        out = Value(self.data ** other, label = f"({self.data}^{other})",
+        out = Value(self.data ** other, label = f"(({self.label})^{other})",
                     _children = (self,), _op = 'pow')
 
         def _backward ():
-            self.grad = out.grad * out.data * np.log(self.data)
+            self.grad += (other * self.data ** (other - 1)) * out.grad
 
         out._backward = _backward
         return out
 
     def __truediv__ (self, other):
         return self * (other ** -1)
+
+    def __rtruediv__ (self, other):
+        return other * (self ** -1)
 
     def tanh (self):
         x = self.data
@@ -151,14 +163,25 @@ class Value:
 a = Value(0.1, label = 'a')
 b = Value(2, label = 'b')
 c = Value(0.3, label = 'c')
-d = (a * b / c).tanh()
-d *= 2
-d.backward()
-draw(d)
+d = (a + b + c)
+e = (2 * d).exp()
+f = (e - 1) / (e + 1)
+
+f.backward()
+draw(f)
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/f00426de0ae63cd67fd0971f058146612e115f80.svg]]
+[[file:./.ob-jupyter/67a146117de4fa87dab7d45a219ab01baf4021c1.svg]]
+
+#+begin_src jupyter-python
+g = d.tanh()
+g.backward()
+draw(g)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/15945a14d7bca7cb52927f96e7ad25852be207fe.svg]]
 
 ** Gradient Descent
 Let us assume $L = a + b \cdot c$. Let us assume that $a$, $b$ and $c$ are independent values that can be computed.
@@ -265,7 +288,7 @@ def draw (root: Value):
 
 #+RESULTS:
 
-** Testin`g
+** Testing
 #+begin_src jupyter-python
 draw(a + b * c)
 #+end_src
