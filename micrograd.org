@@ -357,3 +357,56 @@ l(x)
 | Value | tanh | (((nil * nil) + (0.34570931464162247)) + (nil * nil)) | data | = | 0.9815716543031633 |
 | Value | tanh | (((nil * nil) + (0.651009990883962)) + (nil * nil))   | data | = |  0.990493029044745 |
 :END:
+** Finally, an MLP
+#+begin_src jupyter-python
+class MLP:
+    def __init__ (self, layer_neurons, num_in):
+        num_ins = [num_in] + layer_neurons[:-1]
+        self.layers = [Layer(*l) for l in zip(layer_neurons, num_ins)]
+
+    def __call__ (self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+x = [2.0, 3.0, -1.0]
+mlp = MLP([4, 5, 2, 1], len(x))
+
+mlp(x)
+draw(mlp(x))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+#+begin_example
+(Value  data = 2.2181667211490605)
+(Value  data = 2.58186679728638)
+(Value  data = 2.95802137383244)
+(Value  data = 3.326915816594294)
+(Value  data = 3.3253621724309514)
+(Value  data = 2.5611706548939726)
+(Value  data = 2.68057621760593)
+(Value  data = 2.111074444188271)
+(Value  data = 1.9257716022167577)
+(Value  data = 3.6397028343865143)
+(Value  data = 2.317410899246514)
+(Value  data = 1.8536479322250843)
+(Value  data = 2.2181667211490605)
+(Value  data = 2.58186679728638)
+(Value  data = 2.95802137383244)
+(Value  data = 3.326915816594294)
+(Value  data = 3.3253621724309514)
+(Value  data = 2.5611706548939726)
+(Value  data = 2.68057621760593)
+(Value  data = 2.111074444188271)
+(Value  data = 1.9257716022167577)
+(Value  data = 3.6397028343865143)
+(Value  data = 2.317410899246514)
+(Value  data = 1.8536479322250843)
+#+end_example
+[[file:./.ob-jupyter/388957364149ba2f030ea35584dc1b27650f9c8b.svg]]
+:END:
