@@ -295,3 +295,36 @@ draw(a + b * c)
 
 #+RESULTS:
 [[file:./.ob-jupyter/bbecbd9eb6ae0cc3c902c8cc5c43618c08a01888.svg]]
+
+* Building a Multi Layer Perceptron
+** A Neuron
+A neuron can be considered as a function, that takes in some inputs, weights them according to some internal parameters (aptly named weights), and returns the weighted sum. The most important bit of the neural network is the non-linearity that is applied to it, which allows neural networks to become universal function approximators.
+
+#+begin_src jupyter-python
+class Neuron:
+    def __init__ (self, num_in):
+        self.weights = [Value(np.random.rand()) for _ in range(num_in)]
+        self.bias = np.random.rand()
+
+    def __call__ (self, x):
+        aggregate = sum((w_i * x_i for (w_i, x_i) in zip(self.weights, x)), self.bias)
+        print(aggregate)
+        out = aggregate.tanh()
+        return out
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src jupyter-python
+x = [Value(x) for x in [1.0, 2.0]]
+n = Neuron(len(x))
+
+n(x)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: (Value ((() * ()) + (0.9108577317362596)) + (() * ()) data = 3.274581336367077)
+| Value | tanh | (((nil * nil) + (0.9108577317362596)) + (nil * nil)) | data | = | 0.9971414643117924 |
+:END:
