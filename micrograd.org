@@ -410,3 +410,83 @@ draw(mlp(x))
 #+end_example
 [[file:./.ob-jupyter/388957364149ba2f030ea35584dc1b27650f9c8b.svg]]
 :END:
+
+* Training a Neural Network
+** A sample dataset
+#+begin_src jupyter-python
+xs = [
+  [2.0, 3.0, -1.0],
+  [3.0, -1.0, 0.5],
+  [0.5, 1.0, 1.0],
+  [1.0, 1.0, -1.0],
+]
+ys = [1.0, -1.0, -1.0, 1.0] # desired targets
+#+end_src
+
+#+RESULTS:
+
+** Defining our MLP
+#+begin_src jupyter-python
+nn = MLP([4, 4, 1], len(xs[0]))
+
+y_pred = [nn(x) for x in xs]
+#+end_src
+
+#+RESULTS:
+#+begin_example
+(Value  data = 2.541841660761123)
+(Value  data = 2.6527267223371513)
+(Value  data = 3.164078031180445)
+(Value  data = 2.606547057162536)
+(Value  data = 3.0858630426782323)
+(Value  data = 2.948206787002216)
+(Value  data = 2.272900710710417)
+(Value  data = 2.241363408506711)
+(Value  data = 2.9099230044715)
+(Value  data = 1.061481075540865)
+(Value  data = 1.0213799247765363)
+(Value  data = 0.6501615798473988)
+(Value  data = 0.8188724462911331)
+(Value  data = 2.265548081342464)
+(Value  data = 2.1970510492557898)
+(Value  data = 1.8873704325648932)
+(Value  data = 1.5360721312929286)
+(Value  data = 2.843951434999782)
+(Value  data = 1.9026677914472847)
+(Value  data = 1.2439384111862848)
+(Value  data = 2.8843801386607595)
+(Value  data = 1.529752817060631)
+(Value  data = 2.919976822483739)
+(Value  data = 2.8027218247443426)
+(Value  data = 2.1820794477629413)
+(Value  data = 2.124217011606041)
+(Value  data = 2.9023760111840744)
+(Value  data = 0.7592169162329808)
+(Value  data = 1.2063916960660872)
+(Value  data = 1.150688024875111)
+(Value  data = 0.9004625605961594)
+(Value  data = 2.4419299664249468)
+(Value  data = 2.3640882071209823)
+(Value  data = 1.8353473040653583)
+(Value  data = 1.7593568652373857)
+(Value  data = 2.8605462484191366)
+#+end_example
+
+** Defining our Loss Function
+#+begin_src jupyter-python
+def loss (y_pred, y):
+    return sum((y_p - y_i)**2 for (y_p, y_i) in zip(y_pred, y))
+
+
+loss_back = loss(y_pred, ys)
+loss_back.backward()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+draw(loss_back)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/0f90542156e94ea23581b832d7f6ceba9b968ff2.svg]]
