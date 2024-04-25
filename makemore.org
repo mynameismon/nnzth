@@ -65,7 +65,7 @@ DEMARKATOR = '|'
 LANGUAGE = [DEMARKATOR] + sorted(list(set(''.join(words))))
 
 idx_map = {v: k for (k, v) in enumerate(LANGUAGE)}
-char_map = {k: v for (v, k) in enumerate(LANGUAGE)}
+char_map = {k: v for (k, v) in enumerate(LANGUAGE)}
 #+end_src
 
 #+RESULTS:
@@ -171,3 +171,84 @@ tensor([[   0, 4410, 1306, 1542, 1690, 1531,  417,  669,  874,  591, 2422, 2963,
           123,   35,    4,  110,    2,    0,   32,    4,    4,   73,    2,    3,
             1,  147,   45]], dtype=torch.int32)
 #+end_example
+
+*** Visualising the tensor
+#+begin_src jupyter-python  :results graphics file output :file plots/bigram-plot.png
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(16, 16))
+plt.imshow(bigrams, cmap='Reds')
+for i in range(len(bigrams)):
+    for j  in range(len(row)):
+        bigram = char_map[i] + char_map[j]
+        plt.text(j, i, bigram, ha="center", va="bottom", color="gray")
+        plt.text(j, i, bigrams[i, j].item(), ha="center", va="top", color="gray")
+
+plt.axis('off')
+plt.plot()
+#+end_src
+
+#+RESULTS:
+[[file:plots/bigram-plot.png]]
+
+** Sampling, the basics
+Personally, I would have gone the Bayesian approach (assume each bigram appears normally in the dataset, and then generate posteriors using those priors). But, who am I to judge? It would be an interesting thing to look at once I return to this afterwards. For now, however, let's just stick to Andrej's version :)
+
+*** PyTorch specific stuff
+1. =squeeze=: squeezes array into smallest dimension (example: =[[1, 2]]= turns to =[1, 2]=)
+2. =torch.sum()= can sum across multiple dimensions.
+3. [[https://pytorch.org/docs/stable/notes/broadcasting.html][Broadcasting semantics]] in PyTorch is important! Used to determine how to "broadcast" inline operations in PyTorch across tensors
+   1. Idea:
+      1. Align all dimensions to the _right_
+      2. From the right, move leftwards, ensuring that all dimensions have the following properties:
+	 1. All dimensions are the same
+	 2. One dimension is one
+	 3. The dimension does not exist
+   2. Example bug (See the video at [[https://youtu.be/PaCmpygFfXo?t=2640][~45 mins]])
+      #+begin_src jupyter-python
+      P = bigrams.float()
+      P = P / P.sum(1) # sums rows
+      #             ^--------------------- bug here: dimension will be (27,)
+      #+end_src
+
+      =P.shape= will be $(27, 27)$, while the sum will be a vector of length 27, i.e. shape $(27, )$. Therefore, according to the broadcasting rules, the broadcasted operation will divide the probabilities of each row across each column!
+      #+begin_example
+      P.shape        27 27
+      row sum.shape     27
+      #+end_example
+
+*** Naive way
+#+begin_src jupyter-python
+bigram_probs = bigrams.float()
+bigram_probs = bigram_probs / bigram_probs.sum(1, keepdim=True)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+def generate_name (bigram_probs, rng):
+    name = []
+    idx = 0
+    while True:
+        p = bigram_probs[idx]
+        idx = torch.multinomial(p, num_samples = 1, replacement = True, generator = rng).item()
+
+        if idx == 0:
+            break
+
+        name += char_map[idx]
+
+    return ''.join(name)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+rng = torch.Generator().manual_seed(42)
+
+num_names = 10
+print([generate_name(bigram_probs, rng) for _ in range(num_names)])
+#+end_src
+
+#+RESULTS:
+: ['ya', 'syahavilin', 'dleekahmangonya', 'tryahe', 'chen', 'ena', 'da', 'amiiae', 'a', 'keles']
