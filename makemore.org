@@ -179,7 +179,7 @@ import matplotlib.pyplot as plt
 plt.figure(figsize=(16, 16))
 plt.imshow(bigrams, cmap='Reds')
 for i in range(len(bigrams)):
-    for j  in range(len(row)):
+    for j in range(len(bigrams[i])):
         bigram = char_map[i] + char_map[j]
         plt.text(j, i, bigram, ha="center", va="bottom", color="gray")
         plt.text(j, i, bigrams[i, j].item(), ha="center", va="top", color="gray")
@@ -191,10 +191,10 @@ plt.plot()
 #+RESULTS:
 [[file:plots/bigram-plot.png]]
 
-** Sampling, the basics
+* Sampling, the basics
 Personally, I would have gone the Bayesian approach (assume each bigram appears normally in the dataset, and then generate posteriors using those priors). But, who am I to judge? It would be an interesting thing to look at once I return to this afterwards. For now, however, let's just stick to Andrej's version :)
 
-*** PyTorch specific stuff
+** PyTorch specific stuff
 1. =squeeze=: squeezes array into smallest dimension (example: =[[1, 2]]= turns to =[1, 2]=)
 2. =torch.sum()= can sum across multiple dimensions.
 3. [[https://pytorch.org/docs/stable/notes/broadcasting.html][Broadcasting semantics]] in PyTorch is important! Used to determine how to "broadcast" inline operations in PyTorch across tensors
@@ -217,7 +217,7 @@ Personally, I would have gone the Bayesian approach (assume each bigram appears 
       row sum.shape     27
       #+end_example
 
-*** Naive way
+** Naive way
 #+begin_src jupyter-python
 bigram_probs = bigrams.float()
 bigram_probs = bigram_probs / bigram_probs.sum(1, keepdim=True)
