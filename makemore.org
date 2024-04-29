@@ -253,3 +253,60 @@ print([generate_name(bigram_probs, rng) for _ in range(num_names)])
 #+RESULTS:
 : ['junide', 'janasah', 'p', 'cony', 'a', 'nn', 'kohin', 'tolian', 'juee', 'ksahnaauranilevias']
 
+* Modelling Loss
+Earlier, we had a straightforward way of modelling loss, since we had a test and train dataset that had numerical values. But how do we do that with language, where there are no numbers?
+
+We can think of our model as a predictor, and what we want is the predictions to be as close as possible to the actual thing. How do we predict things? Using the probabiliies. Infact, the probability of generating a certain word is merely the product of the probabilities of the respective bigrams. This is basically a Maximum Likliehood Estimator in disguise.
+$$
+P(\text{word}) = \prod_{n = 0}^{\text{length}} P(\text{bigram})
+$$
+
+We know that we want the probability of generation to be as close to 1 as possible, since that way it would generate only that word. A naive loss function, therefore, would merely be the product. We can also take the negative log likelihood (the negative is merely to turn the function from negative to positive). However, this has a slight disadvantage: it penalises long names. To counter this, one can take the average loss per character.
+
+#+begin_src jupyter-python
+def loss_function (bigram_probs, word):
+    word = [DEMARKATOR] + list(word) + [DEMARKATOR]
+    log_likelihood = 0.0
+    for ch1, ch2 in zip(word, word[1:]):
+        log_likelihood += torch.log(bigram_probs[idx_map[ch1], idx_map[ch2]])
+    return -log_likelihood / (len(word) - 1)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+loss_function(bigram_probs, generate_name(bigram_probs, rng))
+#+end_src
+
+#+RESULTS:
+: tensor(2.8431)
+
+** Fixing a minor problem
+Here, there are some values with zero counts. This is dangerous for our loss function, because it might blow up the log function to =-inf=!
+#+begin_src jupyter-python
+torch.log(torch.tensor(0.0))
+#+end_src
+
+#+RESULTS:
+: tensor(-inf)
+
+In fact, it is easy to see this using some weird bigrams, like =qq=.
+#+begin_src jupyter-python
+loss_function(bigram_probs, "qq")
+#+end_src
+
+#+RESULTS:
+: tensor(inf)
+
+The answer: smoothen all values! We can add some small value to begin with, and count all occurences using that. This, as it turns out, is also known as [[https://en.wikipedia.org/wiki/Additive_smoothing][additive, or Laplacian smoothening]].
+#+begin_src jupyter-python
+smooth_bigram_probs = (bigrams + 1e-6).float()
+smooth_bigram_probs = smooth_bigram_probs / smooth_bigram_probs.sum(1, keepdim=True)
+
+loss_function(smooth_bigram_probs, "qq")
+#+end_src
+
+#+RESULTS:
+: tensor(9.1825)
+
+Note: This is basically creating a problem and fixing it, patting oneself on the back while doing so. Bayesian methods would make this update pointless, since every point always has some probability, be it however small.
