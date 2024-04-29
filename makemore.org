@@ -310,3 +310,40 @@ loss_function(smooth_bigram_probs, "qq")
 : tensor(9.1825)
 
 Note: This is basically creating a problem and fixing it, patting oneself on the back while doing so. Bayesian methods would make this update pointless, since every point always has some probability, be it however small.
+* Chucking an NN at the problem. Problem solved?
+Let's find out, shall we? :)
+** Finding all bigrams
+#+begin_src jupyter-python
+def get_bigrams (word):
+    word = [DEMARKATOR] + list(word) + [DEMARKATOR]
+    for bigram in zip(word, word[1:]):
+        yield bigram
+#+end_src
+
+#+RESULTS:
+
+** Creating a one-hot encoding
+#+begin_src jupyter-python
+bigram_idxs = [[idx_map[ch] for ch in bigram] for word in words[:4] for bigram in get_bigrams(word)]
+datapoints = list(zip(*bigram_idxs))
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+import torch.nn.functional as F
+
+# converts a vector into a one-hot encoding
+one_hot_encoding = lambda x: F.one_hot(torch.tensor(x), num_classes=len(LANGUAGE)).float() 
+
+x_encoding, y_encoding = [one_hot_encoding(l) for l in datapoints]
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+x_encoding.shape
+#+end_src
+
+#+RESULTS:
+: torch.Size([25, 27])
