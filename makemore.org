@@ -410,3 +410,184 @@ The core idea behind regularlisation is to add an implicit or explicity regulari
 
 Explicit methods are usually the addition of $L_{1, 2}$ terms to the loss function.
 
+* MLP: Upgrading our simple neural network
+** Rebuilding the dataset
+#+begin_src jupyter-python
+import numpy as np
+import matplotlib.pyplot as plt
+
+import torch
+import torch.nn.functional as F
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+DEMARKATOR = '|'
+LANGUAGE = [DEMARKATOR] + sorted(list(set(''.join(words))))
+
+idx_map = {v: k for (k, v) in enumerate(LANGUAGE)}
+char_map = {k: v for (k, v) in enumerate(LANGUAGE)}
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+BLOCK_SIZE = 3
+
+xs = []
+ys = []
+
+for word in words:
+    word += DEMARKATOR
+    padded_word = DEMARKATOR * BLOCK_SIZE + word
+    word_grams = [padded_word[i:i + BLOCK_SIZE] for i in range(len(word))]
+    word_predictions = [(word[i], ch) for (i, ch) in enumerate(word_grams)]
+
+    y, x = list(zip(*word_predictions))
+    x = [[idx_map[ch] for ch in x_i] for x_i in x]
+    y = [idx_map[ch] for ch in y]
+
+    xs.extend(x)
+    ys.extend(y)
+
+X = torch.tensor(xs)
+Y = torch.tensor(ys)
+#+end_src
+
+#+RESULTS:
+** Building our embeddings
+Fun fact: we can index PyTorch tensors using all sorts of weird things. Including...(dromroll)...tensors, themselves. Yes, indexing a tensor using a tensor is valid. Therefore, all of that fiddling we did with the one-hot encoding earlier is, well, built into PyTorch.
+
+#+begin_src jupyter-python
+C = torch.randn((27, 2))
+
+emb = C[X]
+#+end_src
+
+#+RESULTS:
+** PyTorch funsies
+PyTorch tensors are very flexible objects. To concatenate the embeddings of a block, one might naively concatenate all of the embeddings as follows:
+#+begin_src jupyter-python
+torch.cat(torch.unbind(emb, 1), 1).shape
+#+end_src
+
+#+RESULTS:
+: torch.Size([16, 6])
+
+This works perfectly fine, except for a small problem: it creates an entirely new tensor for achieving the same thing. This is rather wasteful. Fortunately, PyTorch provides for a way to rephrase our sentiment:
+
+#+begin_src jupyter-python
+emb.view(emb.shape[0], 6)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+tensor([[-0.4726, -0.5054, -0.4726, -0.5054, -0.4726, -0.5054],
+        [-0.4726, -0.5054, -0.4726, -0.5054,  0.2323, -0.0498],
+        [-0.4726, -0.5054,  0.2323, -0.0498, -0.0745, -0.6577],
+        [ 0.2323, -0.0498, -0.0745, -0.6577, -0.0745, -0.6577],
+        [-0.0745, -0.6577, -0.0745, -0.6577, -0.7213, -0.7095],
+        [-0.4726, -0.5054, -0.4726, -0.5054, -0.4726, -0.5054],
+        [-0.4726, -0.5054, -0.4726, -0.5054, -1.4461,  0.0427],
+        [-0.4726, -0.5054, -1.4461,  0.0427,  1.1246, -0.7019],
+        [-1.4461,  0.0427,  1.1246, -0.7019, -0.4193, -1.6884],
+        [ 1.1246, -0.7019, -0.4193, -1.6884,  1.3284, -0.5544],
+        [-0.4193, -1.6884,  1.3284, -0.5544, -0.4193, -1.6884],
+        [ 1.3284, -0.5544, -0.4193, -1.6884, -0.7213, -0.7095],
+        [-0.4726, -0.5054, -0.4726, -0.5054, -0.4726, -0.5054],
+        [-0.4726, -0.5054, -0.4726, -0.5054, -0.7213, -0.7095],
+        [-0.4726, -0.5054, -0.7213, -0.7095,  1.3284, -0.5544],
+        [-0.7213, -0.7095,  1.3284, -0.5544, -0.7213, -0.7095]])
+#+end_example
+
+or, alternatively:
+#+begin_src jupyter-python
+emb.view(-1, 6).shape
+#+end_src
+
+#+RESULTS:
+: torch.Size([16, 6])
+where the -1 suggests PyTorch to inherit the dimension from the original element
+** Cross Entropy
+As it turns out, how we calculate the loss function is well known as the cross entropy loss.
+
+More accurately, cross entropy $\mathcal{H}(p, q)$ is given by
+$$
+\mathcal{H}(p, q) = -\sum_{x} p(x) \log q(x)
+$$
+
+where $p(x)$ is the ideal distribution, and $q(x)$ is the estimated distribution. In this case, since we only have an estimator of the actual distribution of letters, the cross entropy loss can also be calcualted as
+$$
+\mathcal{H}(q) = -\sum_{x} \frac1{N} \log q(x)
+$$
+which is pretty much what we are doing. This interpretation is a Monte Carlo estimator for the cross entropy loss.
+** Setting up the neural network correctly
+We can setup up our neural network using the following basics.
+
+#+begin_src jupyter-python
+class Params:
+    def __init__(self, C, W1, b1, W2, b2):
+        self.C = C
+        self.W1 = W1
+        self.b1 = b1
+        self.W2 = W2
+        self.b2 = b2
+
+        self.__params__ = [C, W1, b1, W2, b2]
+
+    def __iter__(self):
+        return self.__params__.__iter__()
+
+    def __next__(self):
+        return self.__params__.__next__()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+def setup(rng, embedding_dim = 2, layer_width=100):
+    C = torch.randn((27, embedding_dim), generator=rng, requires_grad=True)
+    W1 = torch.randn((embedding_dim * BLOCK_SIZE, layer_width), generator=rng, requires_grad=True)
+    b1 = torch.randn((layer_width,), generator=rng, requires_grad=True)
+    W2 = torch.randn((layer_width, len(LANGUAGE)), generator=rng, requires_grad=True)
+    b2 = torch.randn((len(LANGUAGE),), generator=rng, requires_grad=True)
+    
+    params = Params(C, W1, b1, W2, b2)
+    return params
+
+def forward_pass (p, X, embedding_dim = 2):
+    emb = p.C[X]
+    h = emb.view(-1, embedding_dim * BLOCK_SIZE) @ p.W1 + p.b1
+    h = torch.tanh(h)
+    logits = h @ p.W2 + p.b2
+    return logits
+
+def backward_pass (params, loss, lr = 0.1):
+    for p in params:
+        p.grad = None
+
+    loss.backward()
+
+    for p in params:
+        p.data -= lr * p.grad
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+rng = torch.Generator().manual_seed(42)
+params = setup(rng)
+
+NUM_RUNS = 1000
+
+for i in range(NUM_RUNS):
+    logits = forward_pass(params, X)
+    loss = F.cross_entropy(logits, Y)
+    if (i % 100 == 0):
+        print(loss.item(), end='\r')
+    backward_pass(params, loss, 0.1)
+#+end_src
+
+#+RESULTS:
+: 2.6900081634521484
