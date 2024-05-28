@@ -279,7 +279,7 @@ loss_function(bigram_probs, generate_name(bigram_probs, rng))
 #+end_src
 
 #+RESULTS:
-: tensor(2.8431)
+: tensor(2.1849)
 
 ** Fixing a minor problem
 Here, there are some values with zero counts. This is dangerous for our loss function, because it might blow up the log function to =-inf=!
@@ -324,8 +324,8 @@ def get_bigrams (word):
 
 ** Creating a one-hot encoding
 #+begin_src jupyter-python
-bigram_idxs = [[idx_map[ch] for ch in bigram] for word in words[:4] for bigram in get_bigrams(word)]
-datapoints = list(zip(*bigram_idxs))
+bigram_idxs = [[idx_map[ch] for ch in bigram] for word in words for bigram in get_bigrams(word)]
+xs, ys = zip(*bigram_idxs)
 #+end_src
 
 #+RESULTS:
@@ -336,7 +336,7 @@ import torch.nn.functional as F
 # converts a vector into a one-hot encoding
 one_hot_encoding = lambda x: F.one_hot(torch.tensor(x), num_classes=len(LANGUAGE)).float() 
 
-x_encoding, y_encoding = [one_hot_encoding(l) for l in datapoints]
+x_encoding = one_hot_encoding(xs)
 #+end_src
 
 #+RESULTS:
@@ -346,4 +346,67 @@ x_encoding.shape
 #+end_src
 
 #+RESULTS:
-: torch.Size([25, 27])
+: torch.Size([228146, 27])
+
+#+begin_src jupyter-python :results graphics file output :file plots/one-hot-visual.png
+plt.imshow(x_encoding)
+#+end_src
+
+#+RESULTS:
+[[file:plots/one-hot-visual.png]]
+
+** Actual NN
+
+#+begin_src jupyter-python
+W = torch.randn((27, 27), generator=rng, requires_grad=True)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+W.shape
+#+end_src
+
+#+RESULTS:
+: torch.Size([27, 27])
+
+#+begin_src jupyter-python
+num = len(xs)
+
+for k in range(100):
+    # forward pass
+    logits = x_encoding @ W
+    counts = logits.exp()
+    probs = counts / counts.sum(1, keepdim = True) # probs = logits.softmax()
+    loss = -probs[torch.arange(num), ys].log().mean()
+    print(f"{k=}, {loss.value()}")
+
+    # backward pass
+    W.grad = None
+    loss.backward()
+
+    # gradient update
+    W.data += -20 * W.grad
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+: [0;31m---------------------------------------------------------------------------[0m
+: [0;31mNameError[0m                                 Traceback (most recent call last)
+: Cell [0;32mIn[2], line 1[0m
+: [0;32m----> 1[0m num [38;5;241m=[39m [38;5;28mlen[39m([43mxs[49m)
+: [1;32m      3[0m [38;5;28;01mfor[39;00m k [38;5;129;01min[39;00m [38;5;28mrange[39m([38;5;241m100[39m):
+: [1;32m      4[0m     [38;5;66;03m# forward pass[39;00m
+: [1;32m      5[0m     logits [38;5;241m=[39m x_encoding [38;5;241m@[39m W
+: 
+: [0;31mNameError[0m: name 'xs' is not defined
+:END:
+
+** Regularisation: The last bit
+Regularisation is actually a very cool idea. It's main goal is to bring generality and robustness in neural networks.
+
+The core idea behind regularlisation is to add an implicit or explicity regularisation term in the loss function, that forces the paramters to become "simpler". By preventing weird stuff like 0.0000000024892 instead of 0, it allows the neural network to be represented in simpler terms, and therefore, generalises better (or atleast, that is the aim).
+
+Explicit methods are usually the addition of $L_{1, 2}$ terms to the loss function.
+
