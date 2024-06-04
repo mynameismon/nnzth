@@ -585,9 +585,195 @@ for i in range(NUM_RUNS):
     logits = forward_pass(params, X)
     loss = F.cross_entropy(logits, Y)
     if (i % 100 == 0):
-        print(loss.item(), end='\r')
+        print(i, loss.item(), end='\r')
     backward_pass(params, loss, 0.1)
 #+end_src
 
 #+RESULTS:
-: 2.6900081634521484
+: 900 2.5325357913970947
+** Speeding up Training
+Clearly, training is incredibly slow. We can speedup training by randomly sampling each training 'batch' from our sample and optimising the loss function on that.
+
+#+begin_src jupyter-python
+def mini_batch (dataset_size, batch_size = 32):
+    return torch.randint(0, dataset_size, (batch_size, ))
+#+end_src
+
+#+RESULTS:
+
+Why does this work? It doesnt seem intuitive at first, but the main reason for it to work is the _assumption_ that the data is normally distributed, and each subset of the data is representative of the entire dataset. Hence, the gradient of by a random sample of data should be in the direction of the gradient of the overall data. Hence, training on randomly sampled batches of data can allow for faster convergence.
+
+#+begin_src jupyter-python
+rng = torch.Generator().manual_seed(42)
+params = setup(rng)
+
+NUM_RUNS = 50000
+
+losses = []
+for i in range(NUM_RUNS):   
+    ix = mini_batch(X.shape[0])
+    logits = forward_pass(params, X[ix])
+    loss = F.cross_entropy(logits, Y[ix])
+    losses.append(loss.item())
+    backward_pass(params, loss)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+plt.plot(losses)
+plt.show()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/68ce5c79c460bbcdcf2ddfe1ce6c60ea409a3725.png]]
+** Observing the effect of batch size
+#+begin_src jupyter-python
+NUM_RUNS = 1000
+
+losses = []
+batch_sizes = torch.arange(1, 2 ** 8, 1)
+
+for bs in batch_sizes:
+    rng = torch.Generator().manual_seed(42)
+
+    batch_size = bs.item()
+    params = setup(rng)
+    for i in range(NUM_RUNS):
+        ix = mini_batch(X.shape[0], batch_size)
+        logits = forward_pass(params, X[ix])
+        loss = F.cross_entropy(logits, Y[ix])
+        backward_pass(params, loss)
+    logits = forward_pass(params, X)
+    loss = F.cross_entropy(logits, Y)
+    losses.append(loss.item())
+    print(f"{batch_size=}, {losses[-1]=}", end='\r')
+#+end_src
+
+#+RESULTS:
+: batch_size=255, losses[-1]=2.5453567504882812
+
+
+#+begin_src jupyter-python :results graphics file output :file plots/batch_sizes-vs-losses.png
+plt.plot(batch_sizes, losses)
+plt.show()
+#+end_src
+
+#+RESULTS:
+[[file:plots/batch_sizes-vs-losses.png]]
+
+Clearly, the batch size does not matter too much as long as it is greater than ~8.
+
+** Observing the effect of the learning rate
+
+#+begin_src jupyter-python
+rng = torch.Generator().manual_seed(42)
+params = setup(rng)
+
+NUM_RUNS = 1000
+
+losses = []
+lrs = torch.arange(-3, 1, 0.001)
+
+for lr in lrs:
+    lr = 10 ** lr
+    params = setup(rng)
+    for i in range(NUM_RUNS):
+        ix = mini_batch(X.shape[0])
+        logits = forward_pass(params, X[ix])
+        loss = F.cross_entropy(logits, Y[ix])
+        backward_pass(params, loss, lr)
+    logits = forward_pass(params, X)
+    los = F.cross_entropy(logits, Y)
+    losses.append(loss.item())
+    print(f"{lr.item()=}, {losses[-1]=}", end='\r')
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: lr.item()=0.0010964780813083053, losses[-1]=13.36588191986084
+
+#+begin_src jupyter-python :results graphics file output :file plots/learning-rate-vs-losses-mlp.png
+plt.plot(lrs[:3000], losses[:3000])
+plt.show()
+#+end_src
+
+#+RESULTS:
+[[file:plots/learning-rate-vs-losses-mlp.png]]
+
+** Observing the effect of the embedding size
+So far, we have only used an embedding of size 2. What happens if we increase the size of the embeddings?
+#+begin_src jupyter-python
+params = setup(rng)
+
+NUM_RUNS = 5000
+
+losses = []
+emb_sizes = torch.arange(2, 100, 1)
+
+for emb in emb_sizes:
+    rng = torch.Generator().manual_seed(42)
+
+    emb = emb.item()
+    params = setup(rng, embedding_dim = emb)
+    for i in range(NUM_RUNS):
+        ix = mini_batch(X.shape[0])
+        logits = forward_pass(params, X[ix], emb)
+        loss = F.cross_entropy(logits, Y[ix])
+        backward_pass(params, loss)
+    logits = forward_pass(params, X, emb)
+    los = F.cross_entropy(logits, Y)
+    losses.append(loss.item())
+    print(f"{emb=}, {losses[-1]=}", end='\r')
+#+end_src
+
+#+RESULTS:
+: emb=99, losses[-1]=2.360156297683716
+
+#+begin_src jupyter-python :results graphics file output :file plots/embedding-size-vs-losses-mlp.png
+plt.plot(emb_sizes, losses)
+plt.show()
+#+end_src
+
+#+RESULTS:
+[[file:plots/embedding-size-vs-losses-mlp.png]]
+
+There is no clear correlation between embedding sizes and losses. It remains to see if it changes with an increase in training, since it is likely that all models are extrememly undertrained.
+
+#+begin_src jupyter-python
+params = setup(rng)
+
+NUM_RUNS = 25000
+
+losses = []
+emb_sizes = torch.arange(2, 100, 10)
+
+for emb in emb_sizes:
+    rng = torch.Generator().manual_seed(42)
+
+    emb = emb.item()
+    params = setup(rng, embedding_dim = emb)
+    for i in range(NUM_RUNS):
+        ix = mini_batch(X.shape[0])
+        logits = forward_pass(params, X[ix], emb)
+        loss = F.cross_entropy(logits, Y[ix])
+        backward_pass(params, loss)
+    logits = forward_pass(params, X, emb)
+    los = F.cross_entropy(logits, Y)
+    losses.append(loss.item())
+    print(f"{emb=}, {losses[-1]=}", end='\r')
+#+end_src
+
+#+RESULTS:
+: emb=92, losses[-1]=2.4505319595336914
+
+#+begin_src jupyter-python :results graphics file output :file plots/embedding-size-vs-losses-mlp-overtrained.png
+plt.plot(emb_sizes, losses)
+plt.show()
+#+end_src
+
+#+RESULTS:
+[[file:plots/embedding-size-vs-losses-mlp-overtrained.png]]
+
+There is marked improvement across the board, which means it is likely that it is not an effect of the training data.
+
